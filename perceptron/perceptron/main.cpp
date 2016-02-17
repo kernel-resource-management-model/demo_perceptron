@@ -12,11 +12,11 @@
 #define MEMORY 0
 #define CPU 1
 #define DISK 2
-#define MEMORY_DIFF 10
-#define CPU_DIFF 10
-#define DISK_DIFF 10
+#define MEMORY_DIFF 0.1
+#define CPU_DIFF 0.1
+#define DISK_DIFF 0.1
 #define LC 0.25
-#define N 5
+#define N 3
 using namespace std;
 
 double fRand(double fMin, double fMax)
@@ -181,6 +181,7 @@ void Association::addSynapse(Synapse synapse) {
 }
 
 void Association::setInput() {
+    input = 0;
     for (std::vector<Synapse>::iterator it = synapse.begin() ; it != synapse.end(); ++it) {
         input += it->getSource()->getOutput()*it->getWeight();
     }
@@ -243,7 +244,7 @@ public:
             firstLayer[i] = Association();
             for (int j = 0; j < zCount; j++) {
                 
-                Synapse newSynapse = Synapse(fRand(-0.5, 0.5), &sensorLayer[j]);
+                Synapse newSynapse = Synapse(fRand(0, 0.5), &sensorLayer[j]);
             
                 firstLayer[i].addSynapse(newSynapse);
             }
@@ -252,7 +253,7 @@ public:
         for (int i = 0; i < sCount; i++) {
             secondLayer[i] = Association();
             for (int j = 0; j < fCount; j++) {
-                Synapse newSynapse = Synapse(fRand(-0.5, 0.5), &firstLayer[j]);
+                Synapse newSynapse = Synapse(fRand(0, 0.5), &firstLayer[j]);
                 
                 secondLayer[i].addSynapse(newSynapse);
             }
@@ -261,7 +262,7 @@ public:
         for (int i = 0; i < rCount; i++) {
             reactionLayer[i] = Association();
             for (int j = 0; j < fCount; j++) {
-                Synapse newSynapse = Synapse(fRand(-0.5, 0.5), &secondLayer[j]);
+                Synapse newSynapse = Synapse(fRand(0, 0.5), &secondLayer[j]);
                 
                 reactionLayer[i].addSynapse(newSynapse);
             }
@@ -396,25 +397,34 @@ int main(int argc, const char * argv[]) {
     parameters data;
     parameters result;
     
-    data.memory = 15;
-    data.cpu = 15;
-    data.disk = 494;
+    data.memory = 1;
+    data.cpu = 0;
+    data.disk = 0;
     
+    result = first.getReaction(data);
+    result = first.getReaction(data);
     result = first.getReaction(data);
     
     first.print();
+    std::cout << "Result:" << endl << "memory: " << result.memory << endl << "cpu: " << result.cpu << endl << "disk: " << result.disk << endl;
     
     sample mySamples[N];
     // samples
+    
+    mySamples[0] = {{1, 0, 0}, {1, 0.5, 0}};
+    mySamples[1] = {{0, 1, 0}, {0.2, 1, 0.2}};
+    mySamples[2] = {{0, 0, 1}, {0.1, 0.6, 1}};
     
     bool exit = false;
     
     while (exit == false) {
         for (int i = 0; i < N; i++) {
             exit = first.learning(mySamples[i]);
+            first.print();
+            std::cout << "Result:" << endl << "memory: " << result.memory << endl << "cpu: " << result.cpu << endl << "disk: " << result.disk << endl;
         }
     }
     
-    std::cout << "Result:" << endl << "memory: " << result.memory << endl << "cpu: " << result.cpu << endl << "disk: " << result.disk << endl;
+    first.print();
     return 0;
 }
