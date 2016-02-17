@@ -359,6 +359,20 @@ public:
         if (check(out, data.out) == true) {
             return true;
         } else {
+            
+            for (int i = 0; i < zCount; i++) {
+                sensorLayer[i].errorIn = 0;
+            }
+            for (int i = 0; i < fCount; i++) {
+                firstLayer[i].errorIn = 0;
+            }
+            for (int i = 0; i < sCount; i++) {
+                secondLayer[i].errorIn = 0;
+            }
+            for (int i = 0; i < rCount; i++) {
+                reactionLayer[i].errorIn = 0;
+            }
+            
             reactionLayer[MEMORY].errorIn = data.out.memory - out.memory;
             reactionLayer[CPU].errorIn = data.out.cpu - out.cpu;
             reactionLayer[DISK].errorIn = data.out.disk - out.disk;
