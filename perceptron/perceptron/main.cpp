@@ -9,7 +9,32 @@
 #include <iostream>
 #include <vector>
 #include <cmath>
+#define MEMORY 0
+#define CPU 1
+#define DISK 2
+#define MEMORY_DIFF 10
+#define CPU_DIFF 10
+#define DISK_DIFF 10
+#define LC 0.25
+#define N 5
 using namespace std;
+
+double fRand(double fMin, double fMax)
+{
+    double f = (double)rand() / RAND_MAX;
+    return fMin + f * (fMax - fMin);
+}
+
+typedef struct Data {
+    double memory;
+    double cpu;
+    double disk;
+} parameters;
+
+typedef struct Sample {
+    parameters in;
+    parameters out;
+} sample;
 
 // Class Neuron
 class Neuron {
@@ -19,6 +44,8 @@ protected:
     double thresholdValue;
     
 public:
+    double errorIn = 0;
+    double errorOut = 0;
   /*  Neuron() {
         input = 0;
         output = 0;
@@ -60,20 +87,20 @@ public:
 class Synapse {
 protected:
     double weight;
-    Neuron source;
+    Neuron *source;
     
 public:
-    Synapse(double weight, Neuron source) {
+    Synapse(double weight, Neuron *source) {
         this->weight = weight;
         this->source = source;
     }
     
     void setWeight(double value);
     double getWeight();
-    Neuron getSource();
+    Neuron *getSource();
     void print(void) {
-        double in = source.getInput();
-        double out = source.getInput();
+        double in = source->getInput();
+        double out = source->getInput();
         std::cout << "w " << weight << " in " << in << " out " << out << endl;
     }
 };
@@ -99,6 +126,8 @@ public:
     void addSynapse(Synapse synapse);
     void setInput();
     void setOutput();
+    void setError();
+    void updateWeight();
     void print(void) {
         setInput();
         setOutput();
@@ -129,7 +158,7 @@ double Synapse::getWeight() {
     return weight;
 }
 
-Neuron Synapse::getSource() {
+Neuron *Synapse::getSource() {
     return source;
 }
 
@@ -153,7 +182,7 @@ void Association::addSynapse(Synapse synapse) {
 
 void Association::setInput() {
     for (std::vector<Synapse>::iterator it = synapse.begin() ; it != synapse.end(); ++it) {
-        input += it->getSource().getInput()*it->getWeight();
+        input += it->getSource()->getOutput()*it->getWeight();
     }
 }
 
@@ -165,14 +194,26 @@ void Association::setOutput() { // activation
     }
 }
 
+void Association::setError() {
+    for (std::vector<Synapse>::iterator it = synapse.begin() ; it != synapse.end(); ++it) {
+        it->getSource()->errorIn += this->errorOut*it->getWeight();
+    }
+}
+
+void Association::updateWeight() {
+    for (std::vector<Synapse>::iterator it = synapse.begin() ; it != synapse.end(); ++it) {
+        it->setWeight(it->getWeight() + LC*errorOut*it->getSource()->getOutput());
+    }
+}
+
 // Class Network
 
 class Network {
 public:
-    Sensor *sensorLayer;
-    Association *firstLayer;
-    Association *secondLayer;
-    Association *reactionLayer;
+    Sensor sensorLayer[3];
+    Association firstLayer[3];
+    Association secondLayer[3];
+    Association reactionLayer[3];
     int zCount;
     int fCount;
     int sCount;
@@ -183,40 +224,44 @@ public:
         fCount = 3;
         sCount = 3;
         rCount = 3;
+    
+        //sensorLayer = new Sensor[zCount];
+       // firstLayer = new Association[fCount];
+       // secondLayer = new Association[sCount];
+       // reactionLayer = new Association[rCount];
         
-        sensorLayer = new Sensor[zCount];
-        firstLayer = new Association[fCount];
-        secondLayer = new Association[sCount];
-        reactionLayer = new Association[rCount];
-        
-        sensorLayer[0] = Sensor(0.2);
-        sensorLayer[1] = Sensor(0.3);
-        sensorLayer[2] = Sensor(0.4);
-        
+        sensorLayer[0] = Sensor();
+        sensorLayer[1] = Sensor();
+        sensorLayer[2] = Sensor();
+       
+        /*
         for (int i = 0; i < zCount; i++) {
             sensorLayer[i].setInput(i);
-        }
+        }*/
         
         for (int i = 0; i < fCount; i++) {
+            firstLayer[i] = Association();
             for (int j = 0; j < zCount; j++) {
                 
-                Synapse newSynapse = Synapse(i + j, sensorLayer[j]);
+                Synapse newSynapse = Synapse(fRand(-0.5, 0.5), &sensorLayer[j]);
             
                 firstLayer[i].addSynapse(newSynapse);
             }
         }
         
         for (int i = 0; i < sCount; i++) {
+            secondLayer[i] = Association();
             for (int j = 0; j < fCount; j++) {
-                Synapse newSynapse = Synapse(i + j, firstLayer[j]);
+                Synapse newSynapse = Synapse(fRand(-0.5, 0.5), &firstLayer[j]);
                 
                 secondLayer[i].addSynapse(newSynapse);
             }
         }
         
-        for (int i = 0; i < sCount; i++) {
+        for (int i = 0; i < rCount; i++) {
+            reactionLayer[i] = Association();
             for (int j = 0; j < fCount; j++) {
-                Synapse newSynapse = Synapse(i + j, secondLayer[j]);
+                Synapse newSynapse = Synapse(fRand(-0.5, 0.5), &secondLayer[j]);
                 
                 reactionLayer[i].addSynapse(newSynapse);
             }
@@ -246,6 +291,40 @@ public:
         
     }
     
+    parameters getReaction(parameters data) {
+        parameters result;
+        
+        // set input
+        sensorLayer[MEMORY].setInput(data.memory);
+        sensorLayer[CPU].setInput(data.cpu);
+        sensorLayer[DISK].setInput(data.disk);
+        
+        for (int i = 0; i < zCount; i++) {
+            sensorLayer[i].setOutput();
+        }
+        
+        for (int i = 0; i < fCount; i++) {
+            firstLayer[i].setInput();
+            firstLayer[i].setOutput();
+        }
+        
+        for (int i = 0; i < sCount; i++) {
+            secondLayer[i].setInput();
+            secondLayer[i].setOutput();
+        }
+        
+        for (int i = 0; i < rCount; i++) {
+            reactionLayer[i].setInput();
+            reactionLayer[i].setOutput();
+        }
+        
+        result.memory = reactionLayer[MEMORY].getOutput();
+        result.cpu = reactionLayer[CPU].getOutput();
+        result.disk = reactionLayer[DISK].getOutput();
+        
+        return result;
+    }
+    
     void print() {
         for (int i = 0; i < zCount; i++) {
             std::cout << "Sensor " << i << endl;
@@ -259,12 +338,83 @@ public:
         }
     }
     
+    bool check(parameters result, parameters out) {
+        if ((out.memory - result.memory > MEMORY_DIFF)
+            || (out.cpu - result.cpu > CPU_DIFF)
+            || (out.disk - result.disk > DISK_DIFF)) {
+            return false;
+        }
+        return true;
+    }
+    
+    double error(double er, double o) {
+        return er*o*(1-o);
+    }
+    
+    bool learning(sample data) {
+        parameters out;
+        
+        out = getReaction(data.in);
+        if (check(out, data.out) == true) {
+            return true;
+        } else {
+            reactionLayer[MEMORY].errorIn = data.out.memory - out.memory;
+            reactionLayer[CPU].errorIn = data.out.cpu - out.cpu;
+            reactionLayer[DISK].errorIn = data.out.disk - out.disk;
+            
+            reactionLayer[MEMORY].errorOut = error(reactionLayer[MEMORY].errorIn, out.memory);
+            reactionLayer[CPU].errorOut = error(reactionLayer[CPU].errorIn, out.cpu);
+            reactionLayer[DISK].errorOut = error(reactionLayer[DISK].errorIn, out.disk);
+            
+            for (int j = 0; j < rCount; j++) {
+                reactionLayer[j].setError();
+                reactionLayer[j].updateWeight();
+            }
+            
+            for (int i = 0; i < sCount; i++) {
+                secondLayer[i].errorOut = error(secondLayer[i].errorIn, secondLayer[i].getOutput());
+                secondLayer[i].setError();
+                secondLayer[i].updateWeight();
+            }
+            
+            for (int i = 0; i < fCount; i++) {
+                firstLayer[i].errorOut = error(firstLayer[i].errorIn, firstLayer[i].getOutput());
+                firstLayer[i].setError();
+                firstLayer[i].updateWeight();
+            }
+        }
+        
+        return false;
+    }
+    
+   
+    
 };
 
 int main(int argc, const char * argv[]) {
     Network first = Network();
+    parameters data;
+    parameters result;
+    
+    data.memory = 15;
+    data.cpu = 15;
+    data.disk = 494;
+    
+    result = first.getReaction(data);
     
     first.print();
-    std::cout << "Hello, World!\n";
+    
+    sample mySamples[N];
+    // samples
+    
+    bool exit = false;
+    
+    while (exit == false) {
+        for (int i = 0; i < N; i++) {
+            exit = first.learning(mySamples[i]);
+        }
+    }
+    
+    std::cout << "Result:" << endl << "memory: " << result.memory << endl << "cpu: " << result.cpu << endl << "disk: " << result.disk << endl;
     return 0;
 }
