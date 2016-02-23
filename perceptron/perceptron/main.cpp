@@ -12,12 +12,18 @@
 #define MEMORY 0
 #define CPU 1
 #define DISK 2
-#define MEMORY_DIFF 0.1
-#define CPU_DIFF 0.1
-#define DISK_DIFF 0.1
+#define MEMORY_DIFF 0.001
+#define CPU_DIFF 0.001
+#define DISK_DIFF 0.001
 #define LC 0.25
 #define N 3
 using namespace std;
+
+enum TYPE {
+    memory = 0,
+    cpu,
+    disk
+};
 
 double fRand(double fMin, double fMax)
 {
@@ -46,6 +52,7 @@ protected:
 public:
     double errorIn = 0;
     double errorOut = 0;
+    int type;
   /*  Neuron() {
         input = 0;
         output = 0;
@@ -70,7 +77,14 @@ public:
         output = 0;
         thresholdValue = 0;
     }
-    Sensor(double thresholdValue) {
+    Sensor(int type) {
+        this->type = type;
+        input = 0;
+        output = 0;
+        thresholdValue = 0;
+    }
+    Sensor(int type, double thresholdValue) {
+        this->type = type;
         input = 0;
         output = 0;
         this->thresholdValue = thresholdValue;
@@ -118,7 +132,14 @@ public:
         output = 0;
         thresholdValue = 0;
     }
-    Association(double thresholdValue) {
+    Association(int type) {
+        this->type = type;
+        input = 0;
+        output = 0;
+        thresholdValue = 0;
+    }
+    Association(int type, double thresholdValue) {
+        this->type = type;
         input = 0;
         output = 0;
         this->thresholdValue = thresholdValue;
@@ -203,7 +224,9 @@ void Association::setError() {
 
 void Association::updateWeight() {
     for (std::vector<Synapse>::iterator it = synapse.begin() ; it != synapse.end(); ++it) {
-        it->setWeight(it->getWeight() + LC*errorOut*it->getSource()->getOutput());
+        //if (it->getSource()->type != this->type) {
+            it->setWeight(it->getWeight() + LC*errorOut*it->getSource()->getOutput());
+        //}
     }
 }
 
@@ -213,7 +236,7 @@ class Network {
 public:
     Sensor sensorLayer[3];
     Association firstLayer[3];
-    Association secondLayer[3];
+    //Association secondLayer[3];
     Association reactionLayer[3];
     int zCount;
     int fCount;
@@ -231,9 +254,9 @@ public:
        // secondLayer = new Association[sCount];
        // reactionLayer = new Association[rCount];
         
-        sensorLayer[0] = Sensor();
-        sensorLayer[1] = Sensor();
-        sensorLayer[2] = Sensor();
+        sensorLayer[MEMORY] = Sensor(memory);
+        sensorLayer[CPU] = Sensor(cpu);
+        sensorLayer[DISK] = Sensor(disk);
        
         /*
         for (int i = 0; i < zCount; i++) {
@@ -241,30 +264,40 @@ public:
         }*/
         
         for (int i = 0; i < fCount; i++) {
-            firstLayer[i] = Association();
-            for (int j = 0; j < zCount; j++) {
+            firstLayer[i] = Association(i);
+           /* for (int j = 0; j < zCount; j++) {
                 
-                Synapse newSynapse = Synapse(fRand(0, 0.5), &sensorLayer[j]);
+                Synapse newSynapse = Synapse(fRand(-1, 1), &sensorLayer[j]);
             
                 firstLayer[i].addSynapse(newSynapse);
-            }
+            }*/
+            Synapse newSynapse = Synapse(1, &sensorLayer[i]);
+            
+            firstLayer[i].addSynapse(newSynapse);
+            
         }
         
-        for (int i = 0; i < sCount; i++) {
+        /*for (int i = 0; i < sCount; i++) {
             secondLayer[i] = Association();
             for (int j = 0; j < fCount; j++) {
-                Synapse newSynapse = Synapse(fRand(0, 0.5), &firstLayer[j]);
+                Synapse newSynapse = Synapse(fRand(-1, 1), &firstLayer[j]);
                 
                 secondLayer[i].addSynapse(newSynapse);
             }
-        }
+        }*/
         
         for (int i = 0; i < rCount; i++) {
-            reactionLayer[i] = Association();
+            reactionLayer[i] = Association(i);
             for (int j = 0; j < fCount; j++) {
-                Synapse newSynapse = Synapse(fRand(0, 0.5), &secondLayer[j]);
+               // Synapse newSynapse = Synapse(fRand(-1, 1), &secondLayer[j]);
+                Synapse *newSynapse;
+                if (i == j) {
+                    newSynapse = new Synapse(1, &firstLayer[j]);
+                } else {
+                    newSynapse = new Synapse(fRand(-1, 1), &firstLayer[j]);
+                }
                 
-                reactionLayer[i].addSynapse(newSynapse);
+                reactionLayer[i].addSynapse(*newSynapse);
             }
         }
         
@@ -309,10 +342,10 @@ public:
             firstLayer[i].setOutput();
         }
         
-        for (int i = 0; i < sCount; i++) {
+     /*   for (int i = 0; i < sCount; i++) {
             secondLayer[i].setInput();
             secondLayer[i].setOutput();
-        }
+        }*/
         
         for (int i = 0; i < rCount; i++) {
             reactionLayer[i].setInput();
@@ -340,20 +373,21 @@ public:
     }
     
     bool check(parameters result, parameters out) {
-        if ((out.memory - result.memory > MEMORY_DIFF)
-            || (out.cpu - result.cpu > CPU_DIFF)
-            || (out.disk - result.disk > DISK_DIFF)) {
+        if ((abs(out.memory - result.memory) > MEMORY_DIFF)
+            || (abs(out.cpu - result.cpu) > CPU_DIFF)
+            || (abs(out.disk - result.disk) > DISK_DIFF)) {
             return false;
         }
         return true;
     }
     
     double error(double er, double o) {
-        return er*o*(1-o);
+        //return er*o*(1-o);
+        return er;
     }
     
     bool learning(sample data) {
-        parameters out;
+        parameters out = {0, 0, 0};
         
         out = getReaction(data.in);
         if (check(out, data.out) == true) {
@@ -362,15 +396,19 @@ public:
             
             for (int i = 0; i < zCount; i++) {
                 sensorLayer[i].errorIn = 0;
+                sensorLayer[i].errorOut = 0;
             }
             for (int i = 0; i < fCount; i++) {
                 firstLayer[i].errorIn = 0;
+                firstLayer[i].errorOut = 0;
             }
-            for (int i = 0; i < sCount; i++) {
+           /* for (int i = 0; i < sCount; i++) {
                 secondLayer[i].errorIn = 0;
-            }
+                secondLayer[i].errorOut = 0;
+            }*/
             for (int i = 0; i < rCount; i++) {
                 reactionLayer[i].errorIn = 0;
+                reactionLayer[i].errorOut = 0;
             }
             
             reactionLayer[MEMORY].errorIn = data.out.memory - out.memory;
@@ -386,17 +424,17 @@ public:
                 reactionLayer[j].updateWeight();
             }
             
-            for (int i = 0; i < sCount; i++) {
+          /*  for (int i = 0; i < sCount; i++) {
                 secondLayer[i].errorOut = error(secondLayer[i].errorIn, secondLayer[i].getOutput());
                 secondLayer[i].setError();
                 secondLayer[i].updateWeight();
-            }
+            }*/
             
-            for (int i = 0; i < fCount; i++) {
+          /*  for (int i = 0; i < fCount; i++) {
                 firstLayer[i].errorOut = error(firstLayer[i].errorIn, firstLayer[i].getOutput());
                 firstLayer[i].setError();
                 firstLayer[i].updateWeight();
-            }
+            }*/
         }
         
         return false;
@@ -416,8 +454,6 @@ int main(int argc, const char * argv[]) {
     data.disk = 0;
     
     result = first.getReaction(data);
-    result = first.getReaction(data);
-    result = first.getReaction(data);
     
     first.print();
     std::cout << "Result:" << endl << "memory: " << result.memory << endl << "cpu: " << result.cpu << endl << "disk: " << result.disk << endl;
@@ -425,20 +461,30 @@ int main(int argc, const char * argv[]) {
     sample mySamples[N];
     // samples
     
-    mySamples[0] = {{1, 0, 0}, {1, 0.5, 0}};
-    mySamples[1] = {{0, 1, 0}, {0.2, 1, 0.2}};
+    mySamples[0] = {{0, 1, 0}, {0.1, 0.97, 0}};
+    mySamples[1] = {{1, 0, 0}, {0.95, 0.5, 0}};
     mySamples[2] = {{0, 0, 1}, {0.1, 0.6, 1}};
     
     bool exit = false;
     
     while (exit == false) {
+        exit = true;
         for (int i = 0; i < N; i++) {
-            exit = first.learning(mySamples[i]);
-            first.print();
-            std::cout << "Result:" << endl << "memory: " << result.memory << endl << "cpu: " << result.cpu << endl << "disk: " << result.disk << endl;
+          
+            bool curr = first.learning(mySamples[i]);
+            if (curr == false) {
+                exit = false;
+            }
+            //first.print();
         }
     }
     
     first.print();
+    for (int i = 0; i < N; i++) {
+        std::cout << "Sample " << i << endl;
+        result = first.getReaction(mySamples[i].in);
+        std::cout << "Result:" << endl << "memory: " << result.memory << endl << "cpu: " << result.cpu << endl << "disk: " << result.disk << endl;
+    }
+    
     return 0;
 }
