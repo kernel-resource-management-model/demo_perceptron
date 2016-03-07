@@ -12,11 +12,12 @@
 #define MEMORY 0
 #define CPU 1
 #define DISK 2
-#define MEMORY_DIFF 0.001
-#define CPU_DIFF 0.001
-#define DISK_DIFF 0.001
+#define MEMORY_DIFF 0.1
+#define CPU_DIFF 0.1
+#define DISK_DIFF 0.1
 #define LC 0.25
-#define N 3
+#define N 4
+#define M 8
 using namespace std;
 
 enum TYPE {
@@ -290,14 +291,16 @@ public:
             reactionLayer[i] = Association(i);
             for (int j = 0; j < fCount; j++) {
                // Synapse newSynapse = Synapse(fRand(-1, 1), &secondLayer[j]);
-                Synapse *newSynapse;
+                Synapse *newSynapse = NULL;
                 if (i == j) {
                     newSynapse = new Synapse(1, &firstLayer[j]);
-                } else {
+                } else if (j != CPU) {
                     newSynapse = new Synapse(fRand(-1, 1), &firstLayer[j]);
                 }
                 
-                reactionLayer[i].addSynapse(*newSynapse);
+                if (newSynapse != NULL) {
+                    reactionLayer[i].addSynapse(*newSynapse);
+                }
             }
         }
         
@@ -459,11 +462,17 @@ int main(int argc, const char * argv[]) {
     std::cout << "Result:" << endl << "memory: " << result.memory << endl << "cpu: " << result.cpu << endl << "disk: " << result.disk << endl;
     
     sample mySamples[N];
+    sample myControl[M];
     // samples
     
-    mySamples[0] = {{0, 1, 0}, {0.1, 0.97, 0}};
-    mySamples[1] = {{1, 0, 0}, {0.95, 0.5, 0}};
-    mySamples[2] = {{0, 0, 1}, {0.1, 0.6, 1}};
+    mySamples[0] = {{0, 1, 0}, {0, 1, 0}};
+    mySamples[1] = {{0.19, 0, 0}, {0.14, 0.07, 0}};
+    //mySamples[2] = {{0.38, 0, 0}, {0.28, 0.24, 0}};
+   // mySamples[3] = {{0.57, 0, 0}, {0.42, 0.20, 0}};
+    mySamples[2] = {{0.66, 0, 0}, {0.49,  0.23, 0}};
+   // mySamples[5] = {{0.68, 0, 0}, {0.498, 0.20, 0}};
+    mySamples[3] = {{0.69, 0, 0}, {0.51, 0.20, 0}};
+   // mySamples[7] = {{0, 0, 1}, {0, 0.2, 0.90}};
     
     bool exit = false;
     
@@ -479,10 +488,20 @@ int main(int argc, const char * argv[]) {
         }
     }
     
+    myControl[0] = {{0, 1, 0}, {0, 1, 0}};
+    myControl[1] = {{0.19, 0, 0}, {0.14, 0.07, 0}};
+    myControl[2] = {{0.38, 0, 0}, {0.28, 0.24, 0}};
+    myControl[3] = {{0.57, 0, 0}, {0.42, 0.20, 0}};
+    myControl[4] = {{0.66, 0, 0}, {0.49,  0.23, 0}};
+    myControl[5] = {{0.68, 0, 0}, {0.498, 0.20, 0}};
+    myControl[6] = {{0.69, 0, 0}, {0.51, 0.20, 0}};
+    myControl[7] = {{0, 0, 1}, {0, 0.2, 0.90}};
+
+    
     first.print();
-    for (int i = 0; i < N; i++) {
+    for (int i = 0; i < M; i++) {
         std::cout << "Sample " << i << endl;
-        result = first.getReaction(mySamples[i].in);
+        result = first.getReaction(myControl[i].in);
         std::cout << "Result:" << endl << "memory: " << result.memory << endl << "cpu: " << result.cpu << endl << "disk: " << result.disk << endl;
     }
     
