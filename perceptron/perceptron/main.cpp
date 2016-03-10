@@ -13,10 +13,10 @@
 #define CPU 1
 #define DISK 2
 #define MEMORY_DIFF 0.1
-#define CPU_DIFF 0.1
-#define DISK_DIFF 0.1
+#define CPU_DIFF 0.05
+#define DISK_DIFF 0.2
 #define LC 0.25
-#define N 4
+#define N 11
 #define M 8
 using namespace std;
 
@@ -451,6 +451,24 @@ int main(int argc, const char * argv[]) {
     Network first = Network();
     parameters data;
     parameters result;
+    FILE *input;
+    int n;
+    sample *mySamples;
+    sample myControl[M];
+    
+    input = fopen("samples.txt", "r");
+    fscanf(input, "%d\n", &n);
+    mySamples = (sample *)malloc(n*sizeof(sample));
+    for (int i = 0; i < n; i++) {
+        fscanf(input, "{{%lf, %lf, %lf}, {%lf, %lf, %lf}}\n", &mySamples[i].in.memory, &mySamples[i].in.cpu, &mySamples[i].in.disk,
+               &mySamples[i].out.memory, &mySamples[i].out.cpu, &mySamples[i].out.disk);
+    }
+    fclose(input);
+    
+   /* for (int i = 0; i < n; i++) {
+        printf("{{%lf, %lf, %lf}, {%lf, %lf, %lf}}\n",mySamples[i].in.memory, mySamples[i].in.cpu, mySamples[i].in.disk,
+               mySamples[i].out.memory, mySamples[i].out.cpu, mySamples[i].out.disk);
+    }*/
     
     data.memory = 1;
     data.cpu = 0;
@@ -461,18 +479,21 @@ int main(int argc, const char * argv[]) {
     first.print();
     std::cout << "Result:" << endl << "memory: " << result.memory << endl << "cpu: " << result.cpu << endl << "disk: " << result.disk << endl;
     
-    sample mySamples[N];
-    sample myControl[M];
+  
+
     // samples
     
-    mySamples[0] = {{0, 1, 0}, {0, 1, 0}};
+   /* mySamples[0] = {{0, 1, 0}, {0, 1, 0}};
     mySamples[1] = {{0.19, 0, 0}, {0.14, 0.07, 0}};
-    //mySamples[2] = {{0.38, 0, 0}, {0.28, 0.24, 0}};
-   // mySamples[3] = {{0.57, 0, 0}, {0.42, 0.20, 0}};
-    mySamples[2] = {{0.66, 0, 0}, {0.49,  0.23, 0}};
-   // mySamples[5] = {{0.68, 0, 0}, {0.498, 0.20, 0}};
-    mySamples[3] = {{0.69, 0, 0}, {0.51, 0.20, 0}};
-   // mySamples[7] = {{0, 0, 1}, {0, 0.2, 0.90}};
+    mySamples[2] = {{0.38, 0, 0}, {0.28, 0.24, 0}};
+    mySamples[3] = {{0.57, 0, 0}, {0.42, 0.20, 0}};
+    mySamples[4] = {{0.66, 0, 0}, {0.49,  0.23, 0}};
+    mySamples[5] = {{0.68, 0, 0}, {0.498, 0.20, 0}};
+    mySamples[6] = {{0.69, 0, 0}, {0.51, 0.20, 0}};
+    mySamples[7] = {{0, 0, 1}, {0, 0.2, 0.90}};
+    mySamples[8] = {{1, 0, 0}, {0.58, 0.16, 0.99}};
+    mySamples[9] = {{0.5, 0, 0}, {0.523, 0.993, 0}};
+    mySamples[10] = {{0.75, 0, 0}, {0.57, 0.2, 0.99}};*/
     
     bool exit = false;
     
