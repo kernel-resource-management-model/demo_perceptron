@@ -1,2 +1,2 @@
-# demo_perceptron
+# Demo perceptron
 Demo version of neural network
